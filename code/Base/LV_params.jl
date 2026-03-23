@@ -7,7 +7,7 @@ partial derivative vector as well as the A matrix.
 
 """
 
-function Eff_LV_params(; p, sol) #, verbose = false
+function LV_params(; p, sol) #, verbose = false
 
 ## Parameters are unpacked from dictionary and loaded into variables
     M, N, l, ρ, ω, m, u, λ = p.M, p.N, p.l, p.ρ, p.ω, p.m, p.u, p.λ
@@ -49,11 +49,7 @@ function Eff_LV_params(; p, sol) #, verbose = false
     r = O .- P .- m
 
     ## Check verbose value and return corresponding parameter dictionary
-    if verbose == false
-        return (ℵ = ℵ, r = r, N = N)
-    else
-        return (ℵ = ℵ, r = r, N = N, ∂R = ∂R, A = A)
-    end
+    return (ℵ = ℵ, r = r, N = N)
 end
 
 

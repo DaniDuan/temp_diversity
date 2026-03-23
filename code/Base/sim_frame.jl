@@ -15,10 +15,11 @@ using JLD2
 
 # Include simulation code files
 include("./micrm_params.jl")   # generate_params, modular_uptake, modular_leakage, def_*
-include("./micrm_dx.jl")         # dx!, growth_MiCRM!, supply_MiCRM!, depletion_MiCRM!
+include("./micrm_dx.jl")       # dx!, growth_MiCRM!, supply_MiCRM!, depletion_MiCRM!
 include("./LV_dx.jl")          # LV_dx!, growth_LV!
 include("./LV_params.jl")      # Eff_LV_params
 include("./temp.jl")           # temp_trait, randtemp_param
+include("./invasion_r.jl")     # invasion growth rate
 # include("Jacobian.jl")
 
 ####################################################################################################################################################################################
