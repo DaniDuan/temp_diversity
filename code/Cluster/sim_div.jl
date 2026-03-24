@@ -42,6 +42,7 @@ all_r_inv = Vector{Vector{Float64}}();
 all_Eu = Vector{Vector{Float64}}(); all_Em =  Vector{Vector{Float64}}(); 
 all_Tpu = Vector{Vector{Float64}}(); all_Tpm =  Vector{Vector{Float64}}(); 
 @time for i in range(0, stop = 30, length = 31)
+    Random.seed!(index)
     T = 273.15 + i 
     p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules = round(Int, M / 3), s_ratio = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1])
     ## Calc CUE
@@ -68,11 +69,11 @@ all_Tpu = Vector{Vector{Float64}}(); all_Tpm =  Vector{Vector{Float64}}();
 
     push!(all_rich, length(sur)); push!(all_Shannon, Shannon); push!(all_Simpson, Simpson);
     push!(all_sur, sur); push!(all_ext, ext);
-    push!(all_r_inv, r_inv); 
+    push!(all_r_inv, r_inv); push!(all_ϵ, ϵ); 
     push!(all_u, p.u); push!(all_m, p.m); 
     push!(all_Eu, Eu); push!(all_Em, Em); 
     push!(all_Tpu, Tpu); push!(all_Tpm, Tpm); 
     # push!(u_sur, sum(p.u, dims = 2)[sur]); push!(u_ext, sum(p.u, dims = 2)[ext]);    
 end 
 
-@save "../data/20260324/temp_rich_0/iters0_$(index).jld2" all_rich all_Shannon all_Simpson all_ϵ all_r_inv all_u all_m all_Eu all_Em all_Tpu all_Tpm 
+@save "../data/20260324/temp_rich_0/iters0_$(index).jld2" all_rich all_Shannon all_Simpson all_sur all_ext all_r_inv all_ϵ all_u all_m all_Eu all_Em all_Tpu all_Tpm 
