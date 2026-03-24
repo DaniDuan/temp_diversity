@@ -21,7 +21,7 @@ function invasion_growth_rate(i, p, x0, tspan, cb)
         B = p.B[residents, :], E = p.E[residents, :], Tp = p.Tp[residents, :])
 
     # initial conditions
-    x0_res = x0[2:p.N+p.M]
+    x0_res = vcat(x0[residents], x0[p.N+1:p.N+p.M])# excluding species i from the original species pool
 
     # run resident community to equilibrium
     prob_res = ODEProblem(dx!, x0_res, tspan, p_res)
