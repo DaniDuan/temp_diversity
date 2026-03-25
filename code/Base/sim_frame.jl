@@ -1,4 +1,27 @@
-# cd("WORKING_DIRECTORY")
+# =========================================================================================================================
+# sim_frame.jl
+#
+# Main simulation framework for the temperature-dependent MiCRM.
+# Sets up all dependencies by including the required source files.
+#
+# Required files (must be in the same directory):
+#   micrm_params.jl         — parameter generation: generate_params, modular_uptake, modular_leakage, def_*
+#   micrm_dx.jl             — ODE system: dx!, growth_MiCRM!, supply_MiCRM!, depletion_MiCRM!
+#   LV_dx.jl                — effective LV ODE system: LV_dx!, growth_LV!
+#   LV_params.jl            — effective LV parameter calculation: Eff_LV_params
+#   temp.jl                 — temperature trait functions: temp_trait, randtemp_param
+#   invasion_r.jl           — invasion growth rate calculation
+#   analytical_functions.jl — community similarity and model selection metrics (analytical functions that might be useful)
+#   Jacobian.jl             — community Jacobian for survivor submatrix
+#
+# Typical usage example:
+#   cd("WORKING_DIRECTORY")
+#   include("sim_frame.jl")
+#   p = generate_params(N, M; f_u=modular_uptake, f_l=modular_leakage,
+#           f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules=round(Int, M/3),
+#           s_ratio=100.0, L=L, T=T, ρ_t=ρ_t, Tr=Tr, Ed=Ed,
+#           input_type="leaching")
+# =========================================================================================================================
 
 # Load libraries
 using Distributions, Random
@@ -14,35 +37,11 @@ using Logging
 using JLD2
 
 # Include simulation code files
-include("./micrm_params.jl")   # generate_params, modular_uptake, modular_leakage, def_*
-include("./micrm_dx.jl")       # dx!, growth_MiCRM!, supply_MiCRM!, depletion_MiCRM!
-include("./LV_dx.jl")          # LV_dx!, growth_LV!
-include("./LV_params.jl")      # Eff_LV_params
-include("./temp.jl")           # temp_trait, randtemp_param
-include("./invasion_r.jl")     # invasion growth rate
-# include("Jacobian.jl")
-
-####################################################################################################################################################################################
-
-function cosine_similarity(vec1, vec2)
-    dot_product = dot(vec1, vec2)
-    norm1 = norm(vec1)
-    norm2 = norm(vec2)
-    return dot_product / (norm1 * norm2)
-end
-
-function bray_curtis_dissimilarity(A, B)
-    return sum(abs.(A .- B)) / sum(A .+ B)
-end
-
-function euclidean_distance(A, B)
-    return sqrt(sum((A .- B) .^ 2))
-end
-
-function AIC(model, n)
-    RSS = sum(residuals(model).^2)
-    k = length(coef(model))
-    aic_value = n * log(RSS / n) + 2 * k
-    return aic_value
-end
-
+include("./micrm_params.jl")
+include("./micrm_dx.jl")
+include("./LV_dx.jl")
+include("./LV_params.jl")
+include("./temp.jl")
+include("./invasion_r.jl")
+include("./analytical_functions.jl")
+include("Jacobian.jl")

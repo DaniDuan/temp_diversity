@@ -7,6 +7,6 @@
 #SBATCH --array=1-999
 
 echo "Julia is about to run"
-julia sim_div.jl
+julia ~/code/Cluster/sim_div.jl
 echo "Julia has finished running"
 

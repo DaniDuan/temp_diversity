@@ -1,6 +1,8 @@
-ssh danica@harvey.dept.imperial.ac.uk # Log in
+# ssh danica@harvey.dept.imperial.ac.uk # Log in
+ssh dd1820@harvey.dept.imperial.ac.uk
 
-sftp danica@harvey.dept.imperial.ac.uk # file upload
+# sftp danica@harvey.dept.imperial.ac.uk # file upload
+sftp dd1820@harvey.dept.imperial.ac.uk
 
 put sim_frame.jl # throw in files
 put sim_frame.jl code # throw in files to directory 

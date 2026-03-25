@@ -48,8 +48,7 @@ function LV_params(; p, sol) #, verbose = false
 ## Calculating effective intrinsic growth rates
     r = O .- P .- m
 
-    ## Check verbose value and return corresponding parameter dictionary
-    return (ℵ = ℵ, r = r, N = N)
+        return (ℵ = ℵ, r = r, N = N)
 end
 
 
