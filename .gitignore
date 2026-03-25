@@ -1,0 +1,19 @@
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# R history and session files
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+
+# Julia artifacts
+Manifest.toml
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+
