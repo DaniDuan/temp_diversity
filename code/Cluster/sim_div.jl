@@ -15,6 +15,7 @@
 # =============================================================================
 
 include(joinpath(@__DIR__, "../Base/sim_frame.jl"))
+# include("./Base/sim_frame.jl") # for use in Running example
 
 # =============================================================================
 # Model parameters
@@ -47,16 +48,16 @@ cb = DiscreteCallback(condition, affect!)
 # =============================================================================
 index = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
 
-## =============================================================================
-## Running example
-## =============================================================================
+# # =============================================================================
+# # Running example
+# # =============================================================================
 # T = 15 + 273.15
 # p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules = round(Int, M / 3), s_ratio = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1])
 # prob = ODEProblem(dx!, x0, tspan, p)
 # sol =solve(prob, AutoVern7(Rodas5()), save_everystep = true, callback=cb)
 # bm = sol.u[length(sol.t)][1:N]
 # sur = (1:N)[bm .> 1.0e-7]
-# invasion_growth_rate(5, p, x0, tspan, cb)
+# invasion_growth_rate(1, p, x0, tspan, cb)
 
 # =============================================================================
 # Pre-allocate output containers

@@ -1,3 +1,13 @@
+# =============================================================================
+# Jacobian.jl
+#
+# Computes the community Jacobian matrix of the effective Lotka-Volterra
+# system, restricted to the feasible (surviving) submatrix at equilibrium.
+# Used to assess local asymptotic stability of the assembled community.
+#
+# Requires p_lv from LV_params.jl and sol from solving dx! in micrm_dx.jl.
+# =============================================================================
+
 """
     Eff_Lv_Jac(; p_lv, sol)
 

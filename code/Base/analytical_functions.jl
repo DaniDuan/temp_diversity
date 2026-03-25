@@ -1,3 +1,12 @@
+# =============================================================================
+# analytical_functions.jl
+#
+# Utility functions for comparing communities and evaluating model fit.
+# Includes pairwise similarity/distance metrics for comparing species uptake profiles or community compositions, and AIC for selecting among fitted nonlinear models (e.g. TPC fits via LsqFit.jl).
+#
+# Used in sim_div.jl and post-processing analysis scripts.
+# =============================================================================
+
 """
     cosine_similarity(vec1, vec2)
 
