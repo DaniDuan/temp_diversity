@@ -22,7 +22,7 @@ git clone https://github.com/DaniDuan/temp_diversity.git
 temp_diversity/
 ├── code/
 │   ├── Base/               # Core model source files (Julia)
-│   ├── Analysis/           # Empirical data analysis (R)
+│   ├── Analysis/           # Empirical data (R) analysis and simulation output (Julia) analysis
 │   └── Cluster/            # HPC job submission scripts
 ├── data/                   # Empirical datasets (CSV)
 ├── results/                # Simulation outputs
@@ -112,14 +112,18 @@ println("Richness: ", length(sur))
 
 ## References
 
-- Smith, T.P. et al. (2019). Community-level thermal responses of microbial decomposers following long-term environmental change. *Ecology Letters*, 22(5), 868-879.
-- Smith, T.P. et al. (2021). Systematic variation in the temperature dependence of bacterial carbon use efficiency. *Ecology Letters*, 24(10), 2123-2133.
-- Thompson, L.R. et al. (2017). A communal catalogue reveals Earth's multiscale microbial diversity. *Nature*, 551, 457-463.
-- MacArthur, R. (1970). Species packing and competitive equilibrium for many species. *Theoretical Population Biology*, 1(1), 1-11.
-- Marsland, R. et al. (2019). Available energy fluxes drive a transition in the diversity, stability, and functional structure of microbial communities. *PLOS Computational Biology*, 15(2).
+- Smith, T. P., Thomas, T. J., Garc´ıa-Carreras, B., Sal, S., Yvon-Durocher, G., Bell, T. & Pawar, S. (2019), ‘Community-level respiration of prokaryotic microbes may rise with global warming’, *Nature communications* 10(1), 1–11.
+- Smith, T. P., Clegg, T., Bell, T. & Pawar, S. (2021), ‘Systematic variation in the temperature dependence of bacterial carbon use efficiency’, *Ecology Letters* 24(10), 2123–2133.
+- Thompson, L. R., Sanders, J. G., McDonald, D., Amir, A., Ladau, J., Locey, K. J., Prill, R. J., Tripathi, A., Gibbons, S. M., Ackermann, G. et al. (2017), ‘A communal catalogue reveals earth’s multiscale microbial diversity’, *Nature* 551(7681), 457–463.
+- MacArthur, R. (1970), ‘Species packing and competitive equilibrium for many species’, *Theoretical population biology* 1(1), 1–11.
+- Marsland III, R., Cui, W., Goldford, J., Sanchez, A., Korolev, K. & Mehta, P. (2019), ‘Available energy fluxes drive a transition in the diversity, stability, and functional structure of microbial communities’, *PLoS computational biology* 15(2), e1006793.
 
 ## Author and Contact
 
 **Quqiming (Danica) Duan** --- Imperial College London, Silwood Park
 
+Email: d.duan20@imperial.ac.uk
+
 **Samraat Pawar** --- Imperial College London, Silwood Park
+
+Email: s.pawar@imperial.ac.uk

@@ -256,10 +256,19 @@ end
 """
     F_ω(N, M, kw)
 
-Returns a length-M vector of resource dilution/decay rates, all set to 0.
-Resources therefore only leave the system through consumer uptake.
-Used with `input_type = "constant"` or `"self-renewing"`.
+Returns a length-`M` vector of resource dilution/decay rates.
+
+Reads `ω` from `kw` if provided, otherwise defaults to 0.0 (no dilution).
+Accepts either a scalar (expanded to a uniform length-`M` vector) or a
+length-`M` vector (used as-is), allowing per-resource dilution rates.
+
+Used with `input_type = "leaching"` or `"chemostat"` in `supply_MiCRM!`.
 """
 function F_ω(N, M, kw)
-    return fill(0.0, M)
+    ω_val = get(kw, :ω, 0.0)
+    if ω_val isa AbstractVector
+        return ω_val  # already a vector, use as-is
+    else
+        return fill(Float64(ω_val), M)  # scalar → expand to length-M vector
+    end
 end

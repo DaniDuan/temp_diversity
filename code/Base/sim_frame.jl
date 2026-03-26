@@ -35,6 +35,7 @@ using CairoMakie
 using LsqFit 
 using Logging
 using JLD2
+using StatsBase
 
 # Include simulation code files
 include("./micrm_params.jl")
