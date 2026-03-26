@@ -2,23 +2,17 @@
 # invasion_r.jl
 #
 # Computes the invasion growth rate of each species in a MiCRM community.
-# The invasion growth rate r_inv^i is the per-capita growth rate of species i
-# when rare, evaluated against the equilibrium resource environment set by
-# the resident community (all species except i).
+# The invasion growth rate r_inv^i is the per-capita growth rate of species i when rare, evaluated against the equilibrium resource environment set by the resident community (all species except i).
 #
-# A positive r_inv^i means species i can invade from rare — it is not
-# competitively excluded. At a true community equilibrium, survivors should
-# have r_inv^i ≈ 0 and extinct species r_inv^i < 0.
+# A positive r_inv^i means species i can invade from rare — it is not competitively excluded. At a true community equilibrium, survivors should have r_inv^i ≈ 0 and extinct species r_inv^i < 0.
 #
-# Used in sim_div.jl to diagnose coexistence and competitive exclusion
-# across the temperature gradient.
+# Used in sim_div.jl to diagnose coexistence and competitive exclusion across the temperature gradient.
 # =============================================================================
 
 """
     invasion_growth_rate(i, p, x0, tspan, cb)
 
-Computes the invasion growth rate of species `i` into the resident
-community (all species except `i`) using the following steps:
+Computes the invasion growth rate of species `i` into the resident community (all species except `i`) using the following steps:
 
 1. Remove species `i` to form the resident community of size `N-1`
 2. Simulate the resident community to equilibrium to obtain R*₋ᵢ
@@ -71,10 +65,14 @@ function invasion_growth_rate(i, p, x0, tspan, cb)
         λ          = p.λ[residents, :],
         ρ          = p.ρ,
         ω          = p.ω,
+        Kc         = p.Kc,
         input_type = p.input_type,
         B          = p.B[residents, :],
         E          = p.E[residents, :],
-        Tp         = p.Tp[residents, :]
+        Tp         = p.Tp[residents, :],
+        T          = p.T,
+        Tr         = p.Tr,
+        Ed         = p.Ed
     )
 
     # initial conditions for resident simulation:

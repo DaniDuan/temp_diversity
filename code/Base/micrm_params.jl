@@ -55,6 +55,9 @@ def_ρ(N, M, kw) = ones(M)
 # resource dilution/decay rate: uniform across all resources
 def_ω(N, M, kw) = ones(M)
 
+# resource carrying capacity: uniform across all resources (used by chemostat and self-renewing)
+def_Kc(N, M, kw) = ones(M)
+
 # uptake matrix: each consumer's preferences drawn from a symmetric Dirichlet distribution (uniform niche, no specialisation)
 def_u(N, M, kw) = copy(rand(Distributions.Dirichlet(M, 1.0), N)')
 
@@ -120,6 +123,9 @@ and the resulting `tt[:,1]` (uptake) and `tt[:,2]` (maintenance) scalings are ma
                    High value = even spread across preferred resources.
                    Low value  = peaked on one or few preferred resources.
 - `s_ratio_l`    : within-target scaling factor for leakage (scalar, higher = stronger concentration of by-products into target types)
+- `Kc`           : scalar or length-M Vector — resource carrying capacity.
+                   Required for `input_type = "chemostat"` (target dilution concentration) and `"self-renewing"` (baseline carrying capacity, temperature-scaled internally). 
+                   Defaults to 1.0.
 - `L`            : length-N leakage rate vector (required for modular/temp)
 
 # Returns
@@ -129,7 +135,7 @@ A NamedTuple with fields:
 `n_preferred_resources` is a length-N integer vector of each species niche width (number of preferred resource types). 
 Only set when using `modular_uptake`; `nothing` otherwise.
 """
-function generate_params(N, M; f_m=def_m, f_ρ=def_ρ, f_ω=def_ω, f_u=def_u, f_l=def_l, kwargs...)
+function generate_params(N, M; f_m=def_m, f_ρ=def_ρ, f_ω=def_ω, f_Kc=def_Kc , f_u=def_u, f_l=def_l, kwargs...)
     kw = Dict{Symbol, Any}(kwargs)
 
     # temperature scaling (optional) — must precede f_u and f_m calls
@@ -146,13 +152,14 @@ function generate_params(N, M; f_m=def_m, f_ρ=def_ρ, f_ω=def_ω, f_u=def_u, f
     # resource parameters
     ρ = f_ρ(N, M, kw)   # supply rates (length M)
     ω = f_ω(N, M, kw)   # dilution/decay rates (length M)
+    Kc = f_Kc(N, M, kw)  # carrying capacities (length M), used by chemostat and self-renewing
 
     # retrieve exact preferred resource counts written by modular_uptake
     # defaults to nothing if a non-modular uptake function is used
     n_preferred_resources = get(kw, :n_preferred_resources, nothing)
 
     kw_nt = (; kwargs...)
-    p_nt  = (N=N, M=M, u=u, m=m, l=l, ρ=ρ, ω=ω, λ=λ, B=B, E=E, Tp=Tp,
+    p_nt  = (N=N, M=M, u=u, m=m, l=l, ρ=ρ, ω=ω, Kc=Kc, λ=λ, B=B, E=E, Tp=Tp,
              n_preferred_resources=n_preferred_resources)
     return Base.merge(p_nt, kw_nt)
 end
@@ -360,5 +367,24 @@ function F_ω(N, M, kw)
         return ω_val                    # per-resource dilution rates provided directly
     else
         return fill(Float64(ω_val), M)  # scalar → uniform rate across all resources
+    end
+end
+
+"""
+    F_Kc(N, M, kw)
+
+Returns a length-M vector of resource carrying capacities.
+
+Reads `Kc` from `kw` if provided, otherwise defaults to 1.0 for all resources.
+Accepts either a scalar (expanded to a uniform length-M vector) or a length-M vector (used as-is), allowing per-resource carrying capacities.
+
+Used with `input_type = "chemostat"` (sets the target dilution concentration) and `input_type = "self-renewing"` (sets the baseline carrying capacity before temperature scaling) in `supply_MiCRM!`.
+"""
+function F_Kc(N, M, kw)
+    Kc_val = get(kw, :Kc, 1.0)
+    if Kc_val isa AbstractVector
+        return Kc_val                    # per-resource carrying capacities provided directly
+    else
+        return fill(Float64(Kc_val), M)  # scalar → uniform capacity across all resources
     end
 end

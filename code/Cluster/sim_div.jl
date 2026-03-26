@@ -53,8 +53,8 @@ index = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
 # # Running example
 # # =============================================================================
 # Random.seed!(6)
-# T = 30 + 273.15
-# p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, n_resources = 3:10, l_resources = 3, s_ratio_u  = 100.0, s_ratio_l  = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M))
+# T = 20 + 273.15
+# p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, n_resources = 3:10, l_resources = 3, s_ratio_u  = 10.0, s_ratio_l  = 10.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M), Kc = fill(5, M))
 # prob = ODEProblem(dx!, x0, tspan, p)
 # sol =solve(prob, AutoVern7(Rodas5()), save_everystep = true, callback=cb)
 # bm = sol.u[length(sol.t)][1:N]
@@ -79,7 +79,7 @@ all_Tpu = Vector{Vector{Float64}}(); all_Tpm =  Vector{Vector{Float64}}();
     Random.seed!(index)     # same seed across temperatures for comparability
 
     # generate MiCRM parameters at temperature T
-    p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, n_resources = 3:10, l_resources = 3, s_ratio_u  = 100.0, s_ratio_l  = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M))
+    p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, n_resources = 3:10, l_resources = 3, s_ratio_u  = 10.0, s_ratio_l  = 10.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M), Kc = fill(5, M))
 
     # intrinsic carbon use efficiency per species
     ϵ = (p.u * x0[N+1:N+M] .* (1 .- p.L) .- p.m) ./ (p.u * x0[N+1:N+M])

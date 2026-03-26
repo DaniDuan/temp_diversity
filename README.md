@@ -50,7 +50,7 @@ install.packages(c("ggplot2", "reshape2", "dplyr", "tidyverse", "minpack.lm", "r
 
 - **`sim_frame.jl`**: Top-level framework file. Loads all Julia dependencies and includes all source files below. Start here for any simulation run.
 
-- **`micrm_params.jl`**: Parameter generation for the MiCRM. Provides default and modular sampling functions for all model parameters: uptake matrix $\mathbf{U}$, leakage tensor $\mathbf{L}$, maintenance costs $m$, resource supply $\rho$, and dilution $\omega$. The top-level `generate_params()` assembles these into a single NamedTuple. Modular sampling (`modular_uptake`, `modular_leakage`) groups consumers and resources into metabolic modules with within-module specialisation controlled by `n_resources`, `l_resources`, `s_ratio_u` and `s_ratio_l`.
+- **`micrm_params.jl`**: Parameter generation for the MiCRM. Provides default and modular sampling functions for all model parameters: uptake matrix $\mathbf{U}$, leakage tensor $\mathbf{L}$, maintenance costs $m$, resource supply $\rho$, dilution $\omega$ and resource carrying capacities $Kc$. The top-level `generate_params()` assembles these into a single NamedTuple. Modular sampling (`modular_uptake`, `modular_leakage`) groups consumers and resources into metabolic modules with within-module specialisation controlled by `n_resources`, `l_resources`, `s_ratio_u` and `s_ratio_l`.
 
 - **`micrm_dx.jl`**: ODE system for the MiCRM. Tracks $N$ consumer biomasses and $M$ resource abundances. Uses a modular structure: `growth_MiCRM!`, `supply_MiCRM!`, and `depletion_MiCRM!` can be swapped independently. Supports four resource supply regimes via `input_type`: `"constant"`, `"leaching"`, `"chemostat"`, and `"self-renewing"` (temperature-dependent resource growth).
 
@@ -101,7 +101,8 @@ p = generate_params(N, M;
     Tr          = 273.15 + 10,
     Ed          = 3.5,
     input_type  = "constant",
-    ω           = fill(0.0, M))
+    ω           = fill(0.0, M),
+    Kc          = fill(5, M))
 
 x0   = vcat(fill(0.1, N), fill(1, M))
 prob = ODEProblem(dx!, x0, (0.0, 2.5e10), p)
