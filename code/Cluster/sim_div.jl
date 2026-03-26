@@ -20,9 +20,10 @@ include(joinpath(@__DIR__, "../Base/sim_frame.jl"))
 # =============================================================================
 # Model parameters
 # =============================================================================
-N=7
-M=5
-L = fill(0.3, N);
+N=50
+M=50
+# L = fill(0.3, N);
+L = rand(Normal(0.3, 0.04), N)
 input_type = ["constant", "leaching", "chemostat", "self-renewing"]
 
 # Temp params
@@ -51,13 +52,14 @@ index = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
 # # =============================================================================
 # # Running example
 # # =============================================================================
-# T = 15 + 273.15
-# p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules = round(Int, M / 3), s_ratio = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = 0.0)
+# Random.seed!(6)
+# T = 30 + 273.15
+# p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, n_resources = 3:10, l_resources = 3, s_ratio_u  = 100.0, s_ratio_l  = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M))
 # prob = ODEProblem(dx!, x0, tspan, p)
 # sol =solve(prob, AutoVern7(Rodas5()), save_everystep = true, callback=cb)
 # bm = sol.u[length(sol.t)][1:N]
 # sur = (1:N)[bm .> 1.0e-7]
-# invasion_growth_rate(1, p, x0, tspan, cb)
+# # invasion_growth_rate(1, p, x0, tspan, cb)
 
 # =============================================================================
 # Pre-allocate output containers
@@ -77,7 +79,7 @@ all_Tpu = Vector{Vector{Float64}}(); all_Tpm =  Vector{Vector{Float64}}();
     Random.seed!(index)     # same seed across temperatures for comparability
 
     # generate MiCRM parameters at temperature T
-    p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules = round(Int, M / 3), s_ratio = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M))
+    p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, n_resources = 3:10, l_resources = 3, s_ratio_u  = 100.0, s_ratio_l  = 100.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M))
 
     # intrinsic carbon use efficiency per species
     ϵ = (p.u * x0[N+1:N+M] .* (1 .- p.L) .- p.m) ./ (p.u * x0[N+1:N+M])
@@ -116,7 +118,6 @@ all_Tpu = Vector{Vector{Float64}}(); all_Tpm =  Vector{Vector{Float64}}();
     push!(all_u, p.u); push!(all_m, p.m); 
     push!(all_Eu, Eu); push!(all_Em, Em); 
     push!(all_Tpu, Tpu); push!(all_Tpm, Tpm); 
-    # push!(u_sur, sum(p.u, dims = 2)[sur]); push!(u_ext, sum(p.u, dims = 2)[ext]);    
 end 
 
 # =============================================================================
@@ -125,4 +126,3 @@ end
 results_dir = joinpath(@__DIR__, "../../results/20260325/temp_rich")
 mkpath(results_dir)
 @save joinpath(results_dir, "iters_$(index).jld2") all_rich all_Shannon all_Simpson all_sur all_ext all_r_inv all_ϵ all_u all_m all_Eu all_Em all_Tpu all_Tpm
-# @save "../results/test_3.jld2" all_rich all_Shannon all_Simpson all_sur all_ext all_r_inv all_ϵ all_u all_m all_Eu all_Em all_Tpu all_Tpm
