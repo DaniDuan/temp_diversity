@@ -18,9 +18,9 @@
 #   cd("WORKING_DIRECTORY")
 #   include("sim_frame.jl")
 #   p = generate_params(N, M; f_u=modular_uptake, f_l=modular_leakage,
-#           f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules=round(Int, M/3),
-#           s_ratio=100.0, L=L, T=T, ρ_t=ρ_t, Tr=Tr, Ed=Ed,
-#           input_type="leaching")
+#           f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules = 7, n_byproducts = 2:4, 
+#           s_ratio  = rand(10.0:100.0, N), s_ratio_l  = 20.0, L=L, T=T, ρ_t=ρ_t, Tr=Tr, Ed=Ed,
+#           input_type="leaching", ω = fill(1.0, M), Kc = fill(5.0, M))
 # =========================================================================================================================
 
 # Load libraries

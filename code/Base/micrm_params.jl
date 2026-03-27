@@ -1,49 +1,49 @@
 # =============================================================================
 # micrm_params.jl
 #
-# Parameter generation for the MiCRM. Provides default and modular sampling functions for all model parameters (uptake, leakage, maintenance, supply, dilution), 
-# and the top-level generate_params function that assembles them into a single NamedTuple for use by the ODE solver.
+# Parameter generation for the MiCRM. Provides default and modular sampling
+# functions for all model parameters (uptake, leakage, maintenance, supply,
+# dilution, carrying capacity), and the top-level generate_params function
+# that assembles them into a single NamedTuple for use by the ODE solver.
 #
-# Two sampling schemes are available:
-#   Default (unstructured): uptake and leakage drawn from Dirichlet distributions with no niche structure
-#   Modular:                each species is assigned a random subset of preferred resources, with within-group uptake boosted by s_ratio_u (uptake) and s_ratio_l (leakage)
+# Two sampling schemes:
+#   Default (unstructured): uptake and leakage drawn from Dirichlet
+#                           distributions with no niche structure.
+#   Modular:                structured uptake and leakage with independent
+#                           control of niche width and cross-feeding breadth.
 #
-# Uptake and leakage niche width are controlled directly via resource counts:
-#   n_resources : UnitRange or Integer — number of resource types each species preferentially consumes. 
-#                 Input directly as resource counts, e.g. 3:10 means each species randomly draws between 3 and 10 preferred resources. 
-#                 Lower = specialist, higher = generalist.
-#                 An Integer gives all species the same niche width.
-#   l_resources : Integer — mean number of resource types that each consumed resource transforms into as metabolic by-products (including itself). 
-#                 Controls cross-feeding breadth independently of uptake niche width.
+# Uptake (modular_uptake):
+#   N_modules : Integer -- number of contiguous resource guilds. Resources
+#               1:M are ordered along a metabolic gradient and split into
+#               N_modules blocks. Species assigned in order so p.u heatmap
+#               shows block structure directly without sorting.
+#   s_ratio   : Scalar or length-N Vector -- within-guild uptake boost.
+#               High = specialist (sharp blocks). Low = generalist (blurred).
 #
-# Temperature dependence is optional. If T, Tr, Ed, L are provided, temp_trait (temp.jl) is called to scale uptake and maintenance rates via the Sharpe-Schoolfield equation.
+# Leakage (modular_leakage):
+#   Resources 1:M are ordered by decreasing chemical complexity. Catabolism
+#   is thermodynamically irreversible — leakage from resource α is strictly
+#   forward into {α, α+1, ..., α+n_byproducts}, never backwards.
+#   n_byproducts : Integer or UnitRange{Int} -- downstream chain length.
+#                  Controls which resources receive boosted leakage weight.
+#   s_ratio_l    : Scalar -- ratio of within-chain to background leakage.
+#                  High = directed channelling. Low = diffuse.
+#                  s_ratio_l = 1 recovers the fully random null model.
 #
-# Example calls:
-#
-#   Fixed niche width, uniform within-niche preferences (all species same):
+# Example call:
 #   p = generate_params(N, M;
 #           f_u = modular_uptake, f_l = modular_leakage,
-#           f_m = F_m, f_ρ = F_ρ, f_ω = F_ω,
-#           n_resources = 5, l_resources = 3,
-#           s_ratio_u = 10.0, s_ratio_l = 10.0,
+#           f_m = F_m, f_ρ = F_ρ, f_ω = F_ω, f_Kc = F_Kc,
+#           N_modules    = 10,  s_ratio   = 50.0,
+#           n_byproducts = 2:4, s_ratio_l = 10.0,
 #           L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed,
-#           input_type = "leaching")
-#
-#   Variable niche width + variable within-niche structure (per-species):
-#   Each species consumes 3-10 resources; s_ratio_u varies per species so some have even preferences (high alpha) and others peaked (low alpha):
-#   s_u = rand(Uniform(0.1, 20.0), N)   # per-species Dirichlet concentration
-#   p = generate_params(N, M;
-#           f_u = modular_uptake, f_l = modular_leakage,
-#           f_m = F_m, f_ρ = F_ρ, f_ω = F_ω,
-#           n_resources = 3:10, l_resources = 3,
-#           s_ratio_u = s_u, s_ratio_l = 10.0,
-#           L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed,
-#           input_type = "leaching")
+#           input_type = "constant", ω = fill(0.0, M))
 # =============================================================================
 
 # =============================================================================
 # Default (unstructured) parameter functions
-# These serve as fallback defaults in generate_params and as null-model baselines for comparison against structured (modular) communities.
+# These serve as fallback defaults in generate_params and as null-model
+# baselines for comparison against structured (modular) communities.
 # =============================================================================
 
 # maintenance cost: uniform across all consumers
@@ -55,31 +55,28 @@ def_ρ(N, M, kw) = ones(M)
 # resource dilution/decay rate: uniform across all resources
 def_ω(N, M, kw) = ones(M)
 
-# resource carrying capacity: uniform across all resources (used by chemostat and self-renewing)
+# resource carrying capacity: uniform across all resources
 def_Kc(N, M, kw) = ones(M)
 
-# uptake matrix: each consumer's preferences drawn from a symmetric Dirichlet distribution (uniform niche, no specialisation)
+# uptake matrix: symmetric Dirichlet — uniform niche, no specialisation
 def_u(N, M, kw) = copy(rand(Distributions.Dirichlet(M, 1.0), N)')
 
 """
     def_l(N, M, kw)
 
-Default (unstructured) leakage tensor of shape `(N, M, M)`.
+Default (unstructured) leakage tensor of shape (N, M, M).
+Each species i draws a leakage redistribution vector for each resource α
+from a symmetric Dirichlet distribution, scaled by L[i].
+Produces random, unstructured cross-feeding with no metabolic channelling.
 
-Each species `i` independently draws a leakage redistribution vector for each resource `α` from a symmetric Dirichlet distribution, scaled by `L[i]` so that the total leakage per resource sums to `L[i]`.
-
-This produces random, unstructured cross-feeding with no directional metabolic channelling between resource types. 
-Use `modular_leakage` for structured cross-feeding.
-
-Requires `kw[:L]`: length-N vector of per-species total leakage rates.
+Requires kw[:L]: length-N vector of per-species total leakage rates.
 """
 function def_l(N, M, kw)
     L  = kw[:L]
     l  = zeros(N, M, M)
-    ϕ  = fill(1.0, M)
-    dD = Dirichlet(ϕ[:])
-    for i = 1:N
-        for α = 1:M
+    dD = Dirichlet(fill(1.0, M))
+    for i in 1:N
+        for α in 1:M
             l[i, α, :] = rand(dD) * L[i]
         end
     end
@@ -91,76 +88,59 @@ end
 # =============================================================================
 
 """
-    generate_params(N, M; f_m=def_m, f_ρ=def_ρ, f_ω=def_ω,
-                          f_u=def_u, f_l=def_l, kwargs...)
+    generate_params(N, M; f_m, f_ρ, f_ω, f_Kc, f_u, f_l, kwargs...)
 
-Assembles a full MiCRM parameter set for a community of `N` consumers and `M` resources. 
-Each parameter is generated by a swappable function, allowing structured or unstructured sampling schemes to be mixed freely.
+Assembles a full MiCRM parameter set for a community of N consumers and
+M resources. Each parameter is generated by a swappable function.
 
-Temperature dependence is optional. If `T` is present in `kwargs`, `temp_trait` is called (requires also `Tr`, `Ed`, `L`, `rho_t`) 
-and the resulting `tt[:,1]` (uptake) and `tt[:,2]` (maintenance) scalings are made available to `f_u` and `f_m` via `kw[:tt]`.
+Temperature dependence is optional: if T is in kwargs, temp_trait is called
+(requires also Tr, Ed, L, ρ_t) and tt[:,1] (uptake) and tt[:,2] (maintenance)
+are passed to f_u and f_m via kw[:tt].
 
-`lambda` (per-species, per-resource total leakage) is computed automatically from `l` as `lambda[i,alpha] = sum_beta l[i,alpha,beta]` and included in the output.
-
-# Arguments
-- `N`, `M`       : number of consumers and resources
-- `f_m`          : maintenance function, signature `f(N, M, kw) -> Vector{N}`
-- `f_rho`        : supply rate function, signature `f(N, M, kw) -> Vector{M}`
-- `f_omega`      : dilution rate function, signature `f(N, M, kw) -> Vector{M}`
-- `f_u`          : uptake function, signature `f(N, M, kw) -> Matrix{NxM}`
-- `f_l`          : leakage function, signature `f(N, M, kw) -> Array{NxMxM}`
-- `kwargs`       : passed through to all parameter functions and merged into the output NamedTuple
+λ (per-species, per-resource total leakage) is computed from l automatically.
 
 # Key kwargs for modular sampling
-- `n_resources`  : Integer or UnitRange{Int} -- number of resource types each species preferentially consumes. 
-                   E.g. `3:10` draws each species niche width uniformly from 3 to 10 resources,
-                   producing a mixture of specialists (low draw) and generalists (high draw). 
-                   An Integer gives all species the same niche width.
-- `l_resources`  : Integer -- mean number of resource types that each consumed resource transforms into as metabolic by-products (including itself). 
-                   Controls cross-feeding breadth independently of uptake niche width.
-- `s_ratio_u`    : Dirichlet concentration for within-niche uptake preferences.
-                   Scalar (all species same) or length-N Vector (per-species).
-                   High value = even spread across preferred resources.
-                   Low value  = peaked on one or few preferred resources.
-- `s_ratio_l`    : within-target scaling factor for leakage (scalar, higher = stronger concentration of by-products into target types)
-- `Kc`           : scalar or length-M Vector — resource carrying capacity.
-                   Required for `input_type = "chemostat"` (target dilution concentration) and `"self-renewing"` (baseline carrying capacity, temperature-scaled internally). 
-                   Defaults to 1.0.
-- `L`            : length-N leakage rate vector (required for modular/temp)
+- N_modules   : Integer -- number of contiguous resource guilds for uptake.
+- s_ratio     : Scalar or length-N Vector -- within-guild uptake boost.
+                High = specialist. Low = generalist.
+- n_byproducts : Integer or UnitRange{Int} -- downstream leakage chain length.
+                 e.g. 2 or 2:4. Controls thermodynamically directed cross-feeding.
+- s_ratio_l    : Scalar -- within-chain boost relative to background.
+                 High = directed channelling. Low = diffuse. 1 = null model.
+- L           : length-N vector of per-species total leakage rates.
+- Kc          : Scalar or length-M Vector -- resource carrying capacity.
 
 # Returns
-A NamedTuple with fields:
-`N, M, u, m, l, rho, omega, lambda, B, E, Tp, n_preferred_resources` plus all provided `kwargs`.
-
-`n_preferred_resources` is a length-N integer vector of each species niche width (number of preferred resource types). 
-Only set when using `modular_uptake`; `nothing` otherwise.
+NamedTuple with fields: N, M, u, m, l, ρ, ω, Kc, λ, B, E, Tp,
+n_preferred_resources, guild_assign, plus all provided kwargs.
 """
-function generate_params(N, M; f_m=def_m, f_ρ=def_ρ, f_ω=def_ω, f_Kc=def_Kc , f_u=def_u, f_l=def_l, kwargs...)
+function generate_params(N, M; f_m=def_m, f_ρ=def_ρ, f_ω=def_ω, f_Kc=def_Kc,
+                                f_u=def_u, f_l=def_l, kwargs...)
     kw = Dict{Symbol, Any}(kwargs)
 
-    # temperature scaling (optional) — must precede f_u and f_m calls
-    # since both may read kw[:tt] for temperature-scaled trait values
+    # temperature scaling — must precede f_u and f_m
     tt, B, E, Tp = temp_trait(N, kw)
     push!(kw, :tt => tt)
 
     # consumer parameters
-    m = f_m(N, M, kw)   # maintenance costs (length N)
-    u = f_u(N, M, kw)   # uptake matrix (N × M)
-    l = f_l(N, M, kw)   # leakage tensor (N × M × M)
-    λ = reshape(sum(l, dims=3), N, M)  # total leakage per species per resource (N × M)
+    m  = f_m(N, M, kw)
+    u  = f_u(N, M, kw)
+    l  = f_l(N, M, kw)
+    λ  = reshape(sum(l, dims=3), N, M)
 
     # resource parameters
-    ρ = f_ρ(N, M, kw)   # supply rates (length M)
-    ω = f_ω(N, M, kw)   # dilution/decay rates (length M)
-    Kc = f_Kc(N, M, kw)  # carrying capacities (length M), used by chemostat and self-renewing
+    ρ  = f_ρ(N, M, kw)
+    ω  = f_ω(N, M, kw)
+    Kc = f_Kc(N, M, kw)
 
-    # retrieve exact preferred resource counts written by modular_uptake
-    # defaults to nothing if a non-modular uptake function is used
+    # retrieve outputs written by modular functions (nothing if not used)
     n_preferred_resources = get(kw, :n_preferred_resources, nothing)
+    guild_assign          = get(kw, :guild_assign, nothing)
 
     kw_nt = (; kwargs...)
     p_nt  = (N=N, M=M, u=u, m=m, l=l, ρ=ρ, ω=ω, Kc=Kc, λ=λ, B=B, E=E, Tp=Tp,
-             n_preferred_resources=n_preferred_resources)
+             n_preferred_resources=n_preferred_resources,
+             guild_assign=guild_assign)
     return Base.merge(p_nt, kw_nt)
 end
 
@@ -169,173 +149,199 @@ end
 # =============================================================================
 
 """
-    modular_uptake(N, M, kw)
+    modular_uptake(N, M; N_modules, s_ratio, u_sum=nothing)
 
-Generates a modular uptake matrix `u` of shape `(N x M)` where each species is assigned a random subset of preferred resource types, 
-with within-niche preference structure drawn from a Dirichlet distribution.
+Generates a modular uptake matrix u of shape (N × M) with a contiguous guild
+block structure. Resources 1:M are split into N_modules ordered blocks of size
+≈ M/N_modules. Species are assigned to guilds in order so that plotting u as a
+heatmap directly shows the block structure without any sorting.
 
-Each species `i` independently draws its niche width (number of preferred resources) from `n_resources`, 
-then samples its uptake preferences over those resources from a Dirichlet distribution with concentration parameter `s_ratio_u[i]`. 
-Outside its preferred set, the species draws from a flat Dirichlet with concentration 1.0 (uniform baseline).
+    Resource:  1  2  3  4  5  6  7  8  9  10
+               |--- guild 1 ---|--- guild 2 ---|
+    Species 1: x  x  x  x  x  .  .  .  .  .    (guild 1, high s_ratio)
+    Species 2: x  x  x  x  x  .  .  .  .  .    (guild 1, high s_ratio)
+    Species 3: .  .  .  .  .  x  x  x  x  x    (guild 2, high s_ratio)
+    Species 4: .  .  .  .  .  x  x  x  x  x    (guild 2, high s_ratio)
 
-The Dirichlet concentration parameter `s_ratio_u` controls preference evenness within the preferred resource set:
-- High `s_ratio_u[i]` → uniform distribution across preferred resources (even generalist)
-- Low `s_ratio_u[i]`  → peaked distribution, one or few resources dominate (strong specialist within niche)
-- `s_ratio_u` can be a scalar (all species same) or a length-N vector (per-species, allowing a diversity of preference structures)
+The specialist/generalist axis is controlled entirely by s_ratio:
+  - Raw random uptake is drawn across all M resources (uniform baseline).
+  - Within-guild entries are multiplied by s_ratio before row-normalisation.
+  - High s_ratio → guild entries >> baseline → sharp blocks → specialist.
+  - Low  s_ratio → guild ≈ baseline → flat rows → generalist.
+  - s_ratio can be a scalar (all species same) or a length-N Vector
+    (per-species mixture of specialists and generalists).
 
-- Lower `n_resources` draw → fewer preferred resources → specialist
-- Higher `n_resources` draw → more preferred resources → generalist
+Rows are scaled by u_sum (length-N vector of total uptake rates per species).
+If u_sum is nothing, defaults to 2.5 for all species.
 
-After normalisation, rows are scaled by temperature-dependent `u_sum` from `temp_trait` if `T` is provided, otherwise 2.5.
-
-The per-species niche widths are stored in `kw[:n_preferred_resources]` and accessible as `p.n_preferred_resources` after `generate_params`.
-
-# Key logic summary (for M=50, n_resources = 3:10):
-- Species drawing 3  preferred resources → narrow niche → specialist
-- Species drawing 10 preferred resources → wide niche  → generalist
-- High s_ratio_u → even preferences within niche
-- Low  s_ratio_u → peaked preferences within niche (one resource dominates)
-
-# Required keys in `kw`
-- `n_resources` : Integer (all species same width) or UnitRange{Int} (per-species draw). Direct resource counts, not group counts.
-- `s_ratio_u`   : Dirichlet concentration parameter for within-niche preference structure. 
-                  Scalar (same for all species) or length-N Vector (per-species).
-                  Higher = more even; lower = more peaked.
-
-# Optional keys in `kw`
-- `T`: triggers temperature-dependent u_sum scaling via `kw[:tt]`
+Returns (u, guild_assign, block_sizes) where:
+  - u            : N × M uptake matrix, row i sums to u_sum[i]
+  - guild_assign : length-N Int vector of guild membership (1-indexed)
+  - block_sizes  : length-N Int vector of each species' guild block size
 """
-function modular_uptake(N, M, kw)
-    n_resources = kw[:n_resources]
-    s_ratio_u   = kw[:s_ratio_u]
+function modular_uptake(N, M; N_modules, s_ratio, u_sum=nothing)
+    @assert N_modules >= 1 "N_modules must be at least 1"
+    @assert N_modules <= M "N_modules cannot exceed M"
 
-    # expand s_ratio_u to a per-species vector if a scalar is given
-    alpha_u = if s_ratio_u isa Number
-        fill(Float64(s_ratio_u), N)     # scalar → same concentration for all species
-    elseif s_ratio_u isa AbstractVector
-        Float64.(s_ratio_u)             # per-species concentration parameters
+    # expand s_ratio to per-species vector
+    sr = if s_ratio isa Number
+        fill(Float64(s_ratio), N)
+    elseif s_ratio isa AbstractVector
+        Float64.(s_ratio)
     else
-        error("s_ratio_u must be a scalar or length-N Vector")
+        error("s_ratio must be a scalar or length-N Vector")
     end
-    @assert length(alpha_u) == N "s_ratio_u vector length must equal N"
+    @assert length(sr) == N "s_ratio vector length must equal N"
 
-    # draw per-species niche widths (number of preferred resources)
-    n_pref = if n_resources isa Integer
-        fill(n_resources, N)            # fixed — all species same niche width
-    elseif n_resources isa UnitRange
-        rand(n_resources, N)            # variable — specialist/generalist mixture
-    else
-        error("n_resources must be an Integer or UnitRange{Int}")
-    end
+    # ── Build contiguous guild partition ──────────────────────────────────────
+    # Sizes differ by at most 1 when M is not divisible by N_modules.
+    sR    = M ÷ N_modules
+    dR    = M - N_modules * sR
+    sizes = fill(sR, N_modules)
+    sizes[1:dR] .+= 1                          # spread remainder to first dR guilds
+    guild_start = cumsum([1; sizes[1:end-1]])   # first resource index of each guild
+    guild_end   = cumsum(sizes)                 # last  resource index of each guild
 
-    @assert maximum(n_pref) <= M "n_resources maximum cannot exceed M"
-    @assert minimum(n_pref) >= 1 "n_resources minimum must be at least 1"
+    # ── Assign species to guilds in order ─────────────────────────────────────
+    # First ceil(N/N_modules) species → guild 1, next batch → guild 2, etc.
+    guild_assign = [min(ceil(Int, i * N_modules / N), N_modules) for i in 1:N]
 
     u = zeros(N, M)
     for i in 1:N
-        # sample this species preferred resource indices without replacement
-        preferred = sample(1:M, n_pref[i], replace = false)
-        non_pref  = setdiff(1:M, preferred)
+        g         = guild_assign[i]
+        preferred = guild_start[g]:guild_end[g]
 
-        # draw within-niche preferences from Dirichlet(alpha_u[i])
-        # high alpha_u → even spread; low alpha_u → peaked on one resource
-        pref_weights = rand(Dirichlet(fill(alpha_u[i], n_pref[i])))
+        # flat random baseline across all M resources
+        u_raw = rand(M)
 
-        # draw outside-niche preferences from flat Dirichlet(1.0) baseline
-        # scaled down relative to within-niche total to enforce niche structure
-        non_pref_weights = if length(non_pref) > 0
-            rand(Dirichlet(fill(1.0, length(non_pref)))) ./ (alpha_u[i] * n_pref[i])
-        else
-            Float64[]
-        end
+        # boost within-guild entries by s_ratio[i]
+        u_raw[preferred] .*= sr[i]
 
-        u[i, preferred] = pref_weights
-        if length(non_pref) > 0
-            u[i, non_pref] = non_pref_weights
-        end
-
-        # row-normalise: preferences sum to 1
-        u[i, :] ./= sum(u[i, :])
+        # row-normalise: preferences sum to 1 before scaling
+        u[i, :] = u_raw ./ sum(u_raw)
     end
 
-    # scale by temperature-dependent total uptake per species
-    u_sum = haskey(kw, :T) ? kw[:tt][:, 1] : fill(2.5, N)
-    u .*= u_sum
+    # scale each row by u_sum (temperature-dependent total uptake per species)
+    us = isnothing(u_sum) ? fill(2.5, N) : u_sum
+    u .*= reshape(us, N, 1)   # column vector → broadcasts across columns, scaling each row
 
-    # store per-species niche widths for downstream analysis
-    kw[:n_preferred_resources] = n_pref
+    return u, guild_assign, sizes[guild_assign]
+end
 
+"""
+    modular_uptake(N, M, kw)
+
+Wrapper for `modular_uptake` for use inside `generate_params`. Reads
+N_modules, s_ratio, and temperature-scaled u_sum from the kw Dict, calls
+the core function, and writes guild_assign and n_preferred_resources back
+into kw so they are accessible as p.guild_assign and p.n_preferred_resources.
+"""
+function modular_uptake(N, M, kw)
+    u_sum = haskey(kw, :T) ? kw[:tt][:, 1] : nothing
+    u, guild_assign, block_sizes = modular_uptake(N, M;
+        N_modules = kw[:N_modules],
+        s_ratio   = kw[:s_ratio],
+        u_sum     = u_sum
+    )
+    kw[:guild_assign]          = guild_assign
+    kw[:n_preferred_resources] = block_sizes
     return u
 end
+
 
 # =============================================================================
 # Modular leakage
 # =============================================================================
 
 """
-    modular_leakage(N, M, kw)
+    modular_leakage(N, M; n_byproducts, s_ratio_l, L)
 
-Generates a species-level leakage tensor `l` of shape `(N, M, M)`.
+Generates a species-level leakage tensor l of shape (N, M, M) with a
+strictly directional metabolic chain structure, consistent with the
+thermodynamic irreversibility of catabolism.
 
-For each species `i` and each consumed resource `alpha`, the metabolic by-products are distributed across approximately `l_resources` resource types (including resource `alpha` itself). 
-The target output resources are sampled without replacement; `alpha` is always included to ensure self-leakage is possible. 
-Within-target entries are multiplied by `s_ratio_l` before row-normalisation, concentrating cross-feeding into the target resource types.
+Resources 1:M are ordered by decreasing chemical complexity (e.g. resource 1
+= complex polymers, resource M = simple end-products such as acetate/CO₂).
+Catabolism is exergonic and irreversible: resource α can only produce simpler
+by-products {α, α+1, ..., α+nb}, never the reverse.
 
-`l_resources` controls cross-feeding breadth independently of uptake niche width (`n_resources`), 
-allowing e.g. a generalist consumer to have narrow cross-feeding or a specialist to have broad cross-feeding.
+Structure per row (i, α):
+  - A flat random baseline is drawn across ALL M resources, representing the
+    small non-specific background secretion always present in real metabolic
+    networks (no pathway is ever exactly zero; Marsland et al. 2020).
+  - Entries within the forward chain window {α, ..., α+nb} are multiplied
+    by s_ratio_l, concentrating leakage into primary downstream products.
+  - The row is normalised and scaled so that sum_β l[i,α,β] = L[i].
 
-Each row `alpha` is scaled so that `sum_beta l[i,alpha,beta] = L[i]`.
+s_ratio_l controls the ratio of within-chain to background leakage weight:
+  High s_ratio_l → chain entries >> background → directed channelling.
+  Low  s_ratio_l → chain ≈ background          → diffuse leakage.
+  s_ratio_l = 1  → null model, equivalent to fully random def_l.
 
-# Required keys in `kw`
-- `l_resources` : Integer — mean number of resource types each consumed resource transforms into (including itself). 
-                  Must be >= 1 and <= M.
-- `s_ratio_l`   : within-target scaling factor for leakage (1 = no structure)
-- `L`           : length-N vector of per-species total leakage rates
+n_byproducts sets the chain length (not counting the source resource itself):
+  Integer   → fixed chain length for all resources and species.
+  UnitRange → each (species, resource) pair independently draws its chain
+              length, e.g. 2:4 gives between 2 and 4 downstream targets.
 """
-function modular_leakage(N, M, kw)
-    l_resources = kw[:l_resources]
-    s_ratio_l   = kw[:s_ratio_l]
-    L           = kw[:L]
-
-    @assert l_resources >= 1  "l_resources must be at least 1"
-    @assert l_resources <= M  "l_resources cannot exceed M"
+function modular_leakage(N, M; n_byproducts, s_ratio_l, L)
+    if n_byproducts isa Integer
+        @assert n_byproducts >= 0 "n_byproducts must be >= 0 (0 = self-leakage only)"
+        @assert n_byproducts < M  "n_byproducts cannot exceed M-1"
+    elseif n_byproducts isa UnitRange
+        @assert first(n_byproducts) >= 0 "n_byproducts range must start >= 0"
+        @assert last(n_byproducts) < M   "n_byproducts range end must be < M"
+    else
+        error("n_byproducts must be an Integer or UnitRange{Int}, e.g. 2 or 2:4")
+    end
 
     l = zeros(N, M, M)
     for i in 1:N
-        li = rand(M, M)
-
         for α in 1:M
-            # sample l_resources target resource types for by-product output
-            # always include alpha itself (self-leakage / incomplete oxidation)
-            n_targets  = min(l_resources, M)
-            others     = setdiff(1:M, α)
-            extra      = sample(others, n_targets - 1, replace = false)
-            targets    = vcat(α, extra)
+            # draw chain length independently per (species, resource)
+            nb = n_byproducts isa Integer ? n_byproducts : rand(n_byproducts)
 
-            # boost target entries by s_ratio_l to concentrate leakage into targets
-            li[α, targets] .*= s_ratio_l
-        end
+            # strictly forward window: α itself plus nb downstream resources
+            # clamped at M — thermodynamically forbidden to go backwards
+            targets = α : min(α + nb, M)
 
-        # row-normalise then scale by species leakage rate L[i]
-        for α in 1:M
-            li[α, :] .= L[i] * li[α, :] ./ sum(li[α, :])
+            # flat random baseline across ALL resources (non-specific background)
+            u_raw = rand(M)
+
+            # boost forward chain targets by s_ratio_l
+            u_raw[targets] .*= s_ratio_l
+
+            # normalise and scale so row sums to L[i]
+            l[i, α, :] = L[i] .* u_raw ./ sum(u_raw)
         end
-        l[i, :, :] = li
     end
 
     return l
 end
 
+"""
+    modular_leakage(N, M, kw)
+
+Wrapper for `modular_leakage` for use inside `generate_params`. Reads
+n_byproducts, s_ratio_l, and L from the kw Dict and calls the core function.
+"""
+function modular_leakage(N, M, kw)
+    modular_leakage(N, M;
+        n_byproducts = kw[:n_byproducts],
+        s_ratio_l    = kw[:s_ratio_l],
+        L            = kw[:L]
+    )
+end
+
+
 # =============================================================================
 # Simulation-specific parameter functions
-# (used in sim_frame.jl as f_m, f_ρ, f_ω arguments to generate_params)
 # =============================================================================
 
 """
     F_m(N, M, kw)
 
-Returns a length-N vector of consumer maintenance costs. If `T` is present in `kw`, returns temperature-scaled values from `kw[:tt][:,2]` (computed by `temp_trait`). 
-Otherwise defaults to 0.2 for all consumers.
+Returns a length-N vector of consumer maintenance costs. If T is present in
+kw, returns temperature-scaled values from kw[:tt][:,2]. Otherwise 0.2.
 """
 function F_m(N, M, kw)
     return haskey(kw, :T) ? kw[:tt][:, 2] : fill(0.2, N)
@@ -344,8 +350,8 @@ end
 """
     F_ρ(N, M, kw)
 
-Returns a length-M vector of resource supply rates. All resources are supplied at a constant rate of 1.0. 
-Used with `input_type = "constant"` or `"leaching"` in `supply_MiCRM!`.
+Returns a length-M vector of resource supply rates, all 1.0.
+Used with input_type = "constant" or "leaching".
 """
 function F_ρ(N, M, kw)
     return fill(1.0, M)
@@ -354,19 +360,16 @@ end
 """
     F_ω(N, M, kw)
 
-Returns a length-`M` vector of resource dilution/decay rates.
-
-Reads `ω` from `kw` if provided, otherwise defaults to 0.0 (no dilution).
-Accepts either a scalar (expanded to a uniform length-`M` vector) or a length-`M` vector (used as-is), allowing per-resource dilution rates.
-
-Used with `input_type = "leaching"` or `"chemostat"` in `supply_MiCRM!`.
+Returns a length-M vector of resource dilution/decay rates.
+Reads ω from kw (scalar or Vector), defaults to 0.0.
+Used with input_type = "leaching" or "chemostat".
 """
 function F_ω(N, M, kw)
     ω_val = get(kw, :ω, 0.0)
     if ω_val isa AbstractVector
-        return ω_val                    # per-resource dilution rates provided directly
+        return ω_val
     else
-        return fill(Float64(ω_val), M)  # scalar → uniform rate across all resources
+        return fill(Float64(ω_val), M)
     end
 end
 
@@ -374,17 +377,14 @@ end
     F_Kc(N, M, kw)
 
 Returns a length-M vector of resource carrying capacities.
-
-Reads `Kc` from `kw` if provided, otherwise defaults to 1.0 for all resources.
-Accepts either a scalar (expanded to a uniform length-M vector) or a length-M vector (used as-is), allowing per-resource carrying capacities.
-
-Used with `input_type = "chemostat"` (sets the target dilution concentration) and `input_type = "self-renewing"` (sets the baseline carrying capacity before temperature scaling) in `supply_MiCRM!`.
+Reads Kc from kw (scalar or Vector), defaults to 1.0.
+Used with input_type = "chemostat" and "self-renewing".
 """
 function F_Kc(N, M, kw)
     Kc_val = get(kw, :Kc, 1.0)
     if Kc_val isa AbstractVector
-        return Kc_val                    # per-resource carrying capacities provided directly
+        return Kc_val
     else
-        return fill(Float64(Kc_val), M)  # scalar → uniform capacity across all resources
+        return fill(Float64(Kc_val), M)
     end
 end
