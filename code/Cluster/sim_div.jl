@@ -53,13 +53,13 @@ index = parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
 # # Running example
 # # =============================================================================
 # Random.seed!(6)
-T = 15 + 273.15
-p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules = 4, n_byproducts = 2:4, s_ratio  = rand(20.0:100.0, N), s_ratio_l  = 20.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M), Kc = fill(5, M))
-prob = ODEProblem(dx!, x0, tspan, p)
-sol =solve(prob, AutoVern7(Rodas5()), save_everystep = true, callback=cb)
-bm = sol.u[length(sol.t)][1:N]
-sur = (1:N)[bm .> 1.0e-7]
-invasion_growth_rate(10, p, x0, tspan, cb)
+# T = 15 + 273.15
+# p = generate_params(N, M; f_u = modular_uptake, f_l = modular_leakage, f_m=F_m, f_ρ=F_ρ, f_ω=F_ω, N_modules = 4, n_byproducts = 2:4, s_ratio  = rand(20.0:100.0, N), s_ratio_l  = 20.0, L = L, T = T, ρ_t = ρ_t, Tr = Tr, Ed = Ed, input_type = input_type[1], ω = fill(0.0, M), Kc = fill(5, M))
+# prob = ODEProblem(dx!, x0, tspan, p)
+# sol =solve(prob, AutoVern7(Rodas5()), save_everystep = true, callback=cb)
+# bm = sol.u[length(sol.t)][1:N]
+# sur = (1:N)[bm .> 1.0e-7]
+# invasion_growth_rate(10, p, x0, tspan, cb)
 
 # # plot
 # fig = Figure();
@@ -135,6 +135,6 @@ end
 # =============================================================================
 # Save results
 # =============================================================================
-results_dir = joinpath(@__DIR__, "../../results/20260325/temp_rich")
+results_dir = joinpath(@__DIR__, "../../results/20260327/temp_rich")
 mkpath(results_dir)
 @save joinpath(results_dir, "iters_$(index).jld2") all_rich all_Shannon all_Simpson all_sur all_ext all_r_inv all_ϵ all_u all_m all_Eu all_Em all_Tpu all_Tpm
