@@ -17,3 +17,5 @@ Manifest.toml
 *.jl.*.cov
 *.jl.mem
 
+# Jupyter Notebook checkpoints
+*/.ipynb_checkpoints
