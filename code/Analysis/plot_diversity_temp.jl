@@ -1,16 +1,10 @@
 # =============================================================================
-# diversity_temp.jl
+# plot_diversity_temp.jl
 #
 # Plots MiCRM richness, Shannon, Simpson, and EMP richness against temperature.
-# Four y-axes:
-#   Left outer  (col 0) : Richness (EMP)     — "#E17542"  scatter + SE bars
-#   Left inner  (col 1) : Richness (MiCRM)   — "#6B8EDE"  line + band
-#   Right inner (col 1) : Shannon (MiCRM)    — "#4F363E"  line + band
-#   Right outer (col 2) : Simpson (MiCRM)    — "#7BA9BE"  line + band
-#
-# The two outer axes each sit in a narrow Fixed-width column whose spine
-# abuts the main plot column. linkyaxes! keeps data axes in sync with their
-# label columns.
+# Loads:
+#   stats_re.jld2      — richness mean/se
+
 # =============================================================================
 
 using CairoMakie, JLD2, Statistics, CSV, DataFrames, StatsBase, Interpolations
@@ -51,7 +45,7 @@ sort!(EMP_meanerr, :Temp)
 # =============================================================================
 # Figure layout:  col 0 (narrow, EMP label) | col 1 (main plot) | col 2 (narrow, Simpson label)
 # =============================================================================
-fig = Figure(fontsize = 30, size = (1400, 900))
+fig = Figure(fontsize = 30, size = (1400, 900));
 
 # ── Left outer: EMP richness ticks + label ────────────────────────────────
 ax0b = Axis(fig[1, 1],
