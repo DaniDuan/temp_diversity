@@ -55,18 +55,18 @@ linkxaxes!(axA1, axA2)
 
 lines!(axA1, T_axis, u_sur_mean, color = ("#FA8328", 1.0), linewidth = 5)
 band!(axA1,  T_axis, u_sur_mean .- u_sur_se, u_sur_mean .+ u_sur_se, color = ("#FA8328", 0.2))
-lines!(axA1, T_axis, u_ext_mean, color = ("#FA8328", 0.4), linewidth = 5)
+lines!(axA1, T_axis, u_ext_mean, color = ("#FA8328", 0.4), linewidth = 5, linestyle = :dash)
 band!(axA1,  T_axis, u_ext_mean .- u_ext_se, u_ext_mean .+ u_ext_se, color = ("#FA8328", 0.15))
 
 lines!(axA2, T_axis, m_sur_mean, color = ("#015845", 1.0), linewidth = 5)
 band!(axA2,  T_axis, m_sur_mean .- m_sur_se, m_sur_mean .+ m_sur_se, color = ("#015845", 0.2))
-lines!(axA2, T_axis, m_ext_mean, color = ("#015845", 0.4), linewidth = 5)
+lines!(axA2, T_axis, m_ext_mean, color = ("#015845", 0.4), linewidth = 5, linestyle = :dash)
 band!(axA2,  T_axis, m_ext_mean .- m_ext_se, m_ext_mean .+ m_ext_se, color = ("#015845", 0.15))
 
 l_us = LineElement(color = ("#FA8328", 1.0), linewidth = 5)
-l_ue = LineElement(color = ("#FA8328", 0.4), linewidth = 5)
+l_ue = LineElement(color = ("#FA8328", 0.4), linewidth = 5, linestyle = :dash)
 l_ms = LineElement(color = ("#015845", 1.0), linewidth = 5)
-l_me = LineElement(color = ("#015845", 0.4), linewidth = 5)
+l_me = LineElement(color = ("#015845", 0.4), linewidth = 5, linestyle = :dash)
 Legend(fig[1, 1], [l_us, l_ue, l_ms, l_me],
     ["Survivor uptake", "Extinct uptake", "Survivor maintenance", "Extinct maintenance"],
     tellheight = false, tellwidth = false,
@@ -117,7 +117,7 @@ hlines!(axC, [0.0], color = (:black, 0.4), linewidth = 1.5, linestyle = :dash)
 lines!(axC, T_axis, r_inv_sur_mean, color = ("#EF8F8C", 1.0), linewidth = 5, label = "Survivors")
 band!(axC,  T_axis, r_inv_sur_mean .- r_inv_sur_se, r_inv_sur_mean .+ r_inv_sur_se,
       color = ("#EF8F8C", 0.2))
-lines!(axC, T_axis, r_inv_ext_mean, color = ("#4F363E", 0.6), linewidth = 5, label = "Extinct")
+lines!(axC, T_axis, r_inv_ext_mean, color = ("#4F363E", 0.6), linewidth = 5, label = "Extinct", linestyle = :dash)
 band!(axC,  T_axis, r_inv_ext_mean .- r_inv_ext_se, r_inv_ext_mean .+ r_inv_ext_se,
       color = ("#4F363E", 0.2))
 
