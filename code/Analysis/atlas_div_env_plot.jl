@@ -172,9 +172,9 @@ println("Peak T (with pH) = ", round(T_peak_atlas_pH, digits=2), " °C")
 println("pH effect (β₃):    ", round(β2[4], digits=4), " richness units per pH unit")
 println("R² improvement:    ", round(R2_2 - R2_1, digits=4))
 
-# Primary model for plotting is Model 1 (full dataset, no pH subset)
-β  = β1
-R2 = R2_1
+# Primary model for plotting is Model 12 (full dataset, no pH subset)
+β  = β2
+R2 = R2_2
 
 # =============================================================================
 # Prediction curve on fine grid
@@ -183,13 +183,13 @@ T_min_data = minimum(T_all_C)
 T_max_data = maximum(T_all_C)
 pred_TC    = collect(range(T_min_data, T_max_data, length = 300))
 pred_invT  = invT.(pred_TC)
-X_pred     = hcat(ones(300), pred_invT, pred_invT.^2)
+X_pred   = hcat(ones(300), pred_invT, pred_invT.^2, zeros(300))
 wls_pred   = X_pred * β
 
 # =============================================================================
-# Bootstrap CI on peak temperature (Model 1)
+# Bootstrap CI on peak temperature (Model 2)
 # =============================================================================
-println("\n=== Bootstrap CI on peak (Model 1) ===")
+println("\n=== Bootstrap CI on peak (Model 2) ===")
 
 n_boot      = 2000
 Random.seed!(666)
@@ -208,7 +208,10 @@ for b in 1:n_boot
     R_b = R_all[bi]
     w_b = w_full[bi]
 
-    X_b = hcat(ones(length(x_b)), x_b, x_b.^2)
+    # ── include pH column (mean-centered → 0.0 for prediction) ──
+    ph_b = pH_centered[bi]                                    # ← bootstrap the same pH values
+    X_b  = hcat(ones(length(x_b)), x_b, x_b.^2, ph_b)       # (n×4) ✓
+
     β_b = try
         wls(X_b, R_b, w_b)
     catch
@@ -224,7 +227,7 @@ for b in 1:n_boot
 
     n_valid += 1
     push!(boot_peaks, T_pk_b)
-    boot_curves[:, n_valid] = X_pred * β_b
+    boot_curves[:, n_valid] = X_pred * β_b    # (300×4) * (4,) ✓
 end
 
 boot_curves = boot_curves[:, 1:n_valid]
@@ -235,6 +238,10 @@ println("Peak boot std:     ", round(std(boot_peaks), digits=3), " °C")
 T_peak_atlas_lo = quantile(boot_peaks, 0.025)
 T_peak_atlas_hi = quantile(boot_peaks, 0.975)
 
+invT_peak_2     = -β2[2] / (2.0 * β2[3])
+T_peak_atlas_pH = 1.0 / (k_B * invT_peak_2) - 273.15
+T_peak_atlas    = T_peak_atlas_pH              # ← add this alias line
+println("Peak T (with pH) = ", round(T_peak_atlas_pH, digits=2), " °C")
 println("ATLAS Peak: ", round(T_peak_atlas,    digits=2), "°C  CI: [",
         round(T_peak_atlas_lo, digits=2), ", ",
         round(T_peak_atlas_hi, digits=2), "]")
