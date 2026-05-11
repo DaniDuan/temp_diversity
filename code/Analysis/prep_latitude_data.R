@@ -89,4 +89,3 @@ write.csv(temperate_df_not_aquatic, "../data/top10_temperate_not_aquatic.csv", r
 # cat("../data/top10_tropical.csv  —", nrow(tropical_df),  "samples\n")
 # cat("../data/top10_temperate.csv —", nrow(temperate_df), "samples\n")
 # cat("Columns:", paste(colnames(tropical_df), collapse = ", "), "\n")
-
